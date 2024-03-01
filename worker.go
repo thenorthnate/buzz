@@ -65,9 +65,7 @@ func (w *Worker) run(block *sync.WaitGroup) {
 		case <-ctx.Done():
 			return
 		default:
-			if err := w.runChainOnce(ctx, callChain); err != nil {
-				return
-			}
+			_ = w.runChainOnce(ctx, callChain)
 		}
 	}
 }
