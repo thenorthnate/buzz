@@ -18,10 +18,20 @@ func (t *logTask) Do(ctx context.Context) error {
 	return nil
 }
 
+func logMiddleware(ctx context.Context, chain *buzz.CallChain) error {
+	log.Println("task starting")
+	err := chain.Next(ctx)
+	log.Println("task complete")
+	return err
+}
+
 func TestWorker(t *testing.T) {
 	hive := buzz.New()
-	worker := buzz.NewWorker(&logTask{}).Tick(time.Second).Use(buzz.RecoveryMiddleware)
+	worker := buzz.
+		NewWorker(&logTask{}).
+		Tick(time.Second).
+		Use(buzz.RecoveryMiddleware, logMiddleware)
 	hive.Submit(worker)
 	time.Sleep(5 * time.Second)
-	worker.Stop()
+	hive.StopAll()
 }
