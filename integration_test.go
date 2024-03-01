@@ -25,7 +25,7 @@ func logMiddleware(ctx context.Context, chain *buzz.CallChain) error {
 	return err
 }
 
-func TestWorker(t *testing.T) {
+func TestIntegrationWorker(t *testing.T) {
 	hive := buzz.New()
 	worker := buzz.
 		NewWorker(&logTask{}).
