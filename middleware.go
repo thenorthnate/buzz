@@ -2,14 +2,14 @@ package buzz
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/thenorthnate/evs"
 )
 
 func RecoveryMiddleware(ctx context.Context, chain *CallChain) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			// TODO : add in the stack trace to this error
-			err = fmt.Errorf("panic'd: %v", r)
+			err = evs.Newf("worker panic'd: %v", r).Err()
 		}
 	}()
 	return chain.Next(ctx)

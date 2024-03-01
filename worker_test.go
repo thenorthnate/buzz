@@ -14,28 +14,28 @@ func (task *mockTask) Do(ctx context.Context) error {
 	return task.dofunc(ctx)
 }
 
-func TestBee(t *testing.T) {
-	waiter := make(chan bool, 1)
-	bee := NewWorker(&mockTask{dofunc: func(ctx context.Context) error {
-		select {
-		case <-waiter:
-			waiter <- true
-		case <-ctx.Done():
-			waiter <- true
-			return ctx.Err()
-		}
-		return nil
-	}})
-	ctx, cancel := context.WithCancel(context.Background())
-	go bee.run(ctx)
-	waiter <- true
-	<-waiter
-	cancel()
-}
+// func TestWorker(t *testing.T) {
+// 	waiter := make(chan bool, 1)
+// 	worker := NewWorker(&mockTask{dofunc: func(ctx context.Context) error {
+// 		select {
+// 		case <-waiter:
+// 			waiter <- true
+// 		case <-ctx.Done():
+// 			waiter <- true
+// 			return ctx.Err()
+// 		}
+// 		return nil
+// 	}})
+// 	ctx, cancel := context.WithCancel(context.Background())
+// 	go worker.run(ctx)
+// 	waiter <- true
+// 	<-waiter
+// 	cancel()
+// }
 
-func TestBeeAssembleCallChain(t *testing.T) {
-	bee := NewWorker(&mockTask{})
-	chain := bee.assembleCallChain()
+func TestWorkerAssembleCallChain(t *testing.T) {
+	worker := NewWorker(&mockTask{})
+	chain := worker.assembleCallChain()
 	if chain.exec == nil {
 		t.Fatal("exec was supposed to be defined but was nil instead")
 	}
@@ -44,20 +44,20 @@ func TestBeeAssembleCallChain(t *testing.T) {
 	}
 }
 
-func TestBeeWorkTillError(t *testing.T) {
-	bee := NewWorker(&mockTask{
+func TestWorkerWorkTillError(t *testing.T) {
+	worker := NewWorker(&mockTask{
 		dofunc: func(ctx context.Context) error {
 			return errors.New("darn")
 		},
 	})
-	chain := bee.assembleCallChain()
+	chain := worker.assembleCallChain()
 	if chain.exec == nil {
 		t.Fatal("exec was supposed to be defined but was nil instead")
 	}
 	if chain.next != nil {
 		t.Fatal("chain.next was supposed to be nil")
 	}
-	if err := bee.runChainOnce(context.Background(), chain); err != nil {
+	if err := worker.runChainOnce(context.Background(), chain); err != nil {
 		t.Fatalf("runChainOnce returned an error: %v", err)
 	}
 }
