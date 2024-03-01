@@ -7,11 +7,12 @@ import (
 )
 
 type Worker struct {
-	task       Task
-	middleware []MiddleFunc
-	cancel     context.CancelFunc
-	tick       time.Duration
-	tickChan   <-chan time.Time
+	task           Task
+	middleware     []MiddleFunc
+	cancel         context.CancelFunc
+	tick           time.Duration
+	tickChan       <-chan time.Time
+	notifyComplete chan *Worker
 }
 
 func NewWorker(task Task) *Worker {
@@ -95,4 +96,5 @@ func (w *Worker) Stop() {
 	if w.cancel != nil {
 		w.cancel()
 	}
+	w.notifyComplete <- w
 }
