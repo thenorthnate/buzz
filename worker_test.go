@@ -16,20 +16,22 @@ func (task *mockTask) Do(ctx context.Context) error {
 
 func TestWorker(t *testing.T) {
 	waiter := make(chan struct{}, 1)
-	counter := 0
 	task := &mockTask{dofunc: func(ctx context.Context) error {
-		counter++
-		if counter == 2 {
-			waiter <- struct{}{}
+		select {
+		case waiter <- struct{}{}:
+		default:
 		}
+		<-ctx.Done()
 		return nil
 	}}
 	worker := NewWorker(task)
-
 	hive := New()
 	hive.Submit(worker)
 	<-waiter
 	hive.StopAll()
+	if len(hive.colony) > 0 {
+		t.Fatalf("the hive is supposed to be empty but it still has %v workers in it", len(hive.colony))
+	}
 }
 
 func TestWorkerAssembleCallChain(t *testing.T) {

@@ -2,12 +2,6 @@ package buzz
 
 import (
 	"context"
-
-	backoff "github.com/cenkalti/backoff/v4"
-)
-
-var (
-	DefaultBackoff = backoff.NewExponentialBackOff()
 )
 
 // Task represents the thing that you want accomplished.

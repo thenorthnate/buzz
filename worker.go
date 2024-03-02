@@ -12,9 +12,11 @@ type Worker struct {
 	cancel         context.CancelFunc
 	tick           time.Duration
 	tickChan       <-chan time.Time
-	notifyComplete chan *Worker
+	notifyComplete chan struct{}
+	done           bool
 }
 
+// NewWorker wraps the task and returns a worker that can be submitted to the hive.
 func NewWorker(task Task) *Worker {
 	tickChan := make(chan time.Time)
 	close(tickChan)
@@ -25,13 +27,15 @@ func NewWorker(task Task) *Worker {
 	}
 }
 
-// Use adds the given middleware functions to the Bee.
+// Use adds the given middleware functions to the Worker.
 func (w *Worker) Use(middleware ...MiddleFunc) *Worker {
 	w.middleware = append(w.middleware, middleware...)
 	return w
 }
 
-// Use adds the given middleware functions to the Bee.
+// Tick provides a mechanism through which you can schedule your task to get run on a
+// regular interval. By default the tick time is zero meaning that the task is called
+// repeatedly as fast as the computer executes it.
 func (w *Worker) Tick(tick time.Duration) *Worker {
 	w.tick = tick
 	return w
@@ -94,5 +98,6 @@ func (w *Worker) Stop() {
 	if w.cancel != nil {
 		w.cancel()
 	}
-	w.notifyComplete <- w
+	w.done = true
+	w.notifyComplete <- struct{}{}
 }
