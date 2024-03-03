@@ -37,7 +37,7 @@ func (hive *Hive) startCleanupWorker() {
 func (hive *Hive) removeDoneWorkers() {
 	finished := []int{}
 	for i := range hive.colony {
-		if hive.colony[i].done {
+		if hive.colony[i].done.Load() {
 			finished = append(finished, i)
 		}
 	}
