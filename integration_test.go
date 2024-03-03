@@ -30,7 +30,7 @@ func TestIntegrationWorker(t *testing.T) {
 	worker := buzz.
 		NewWorker(&logTask{}).
 		Tick(time.Second).
-		Use(buzz.RecoveryMiddleware, logMiddleware)
+		Use(logMiddleware)
 	hive.Submit(worker)
 	time.Sleep(5 * time.Second)
 	hive.StopAll()

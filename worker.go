@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// Worker wraps your task with additional context to provide a robust operational environment.
 type Worker struct {
 	task           Task
 	middleware     []MiddleFunc
