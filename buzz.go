@@ -24,4 +24,5 @@ func (chain *CallChain) Next(ctx context.Context) error {
 	return chain.exec(ctx, chain.next)
 }
 
+// MiddleFunc defines the type of any middleware that can be used in the hive.
 type MiddleFunc func(ctx context.Context, chain *CallChain) error

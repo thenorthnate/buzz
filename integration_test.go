@@ -11,13 +11,6 @@ import (
 	"github.com/thenorthnate/buzz"
 )
 
-type logTask struct{}
-
-func (t *logTask) Do(ctx context.Context) error {
-	log.Println("message here")
-	return nil
-}
-
 func logMiddleware(ctx context.Context, chain *buzz.CallChain) error {
 	log.Println("task starting")
 	err := chain.Next(ctx)
