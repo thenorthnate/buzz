@@ -3,6 +3,7 @@ package buzz
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -14,7 +15,7 @@ type Worker struct {
 	tick           time.Duration
 	tickChan       <-chan time.Time
 	notifyComplete chan struct{}
-	done           bool
+	done           atomic.Bool
 }
 
 // NewWorker wraps the task and returns a worker that can be submitted to the hive.
@@ -99,6 +100,6 @@ func (w *Worker) Stop() {
 	if w.cancel != nil {
 		w.cancel()
 	}
-	w.done = true
+	w.done.Store(true)
 	w.notifyComplete <- struct{}{}
 }

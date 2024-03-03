@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"testing"
+	"time"
 )
 
 func logMiddleware(ctx context.Context, chain *CallChain) error {
@@ -16,7 +17,7 @@ func logMiddleware(ctx context.Context, chain *CallChain) error {
 func TestHive_RemoveDoneWorkers(t *testing.T) {
 	hive := New()
 	worker := NewWorker(&mockTask{})
-	worker.done = true
+	worker.done.Store(true)
 	hive.colony = append(hive.colony, worker)
 	hive.removeDoneWorkers()
 	if len(hive.colony) != 0 {
@@ -27,7 +28,6 @@ func TestHive_RemoveDoneWorkers(t *testing.T) {
 func TestHive_Middleware(t *testing.T) {
 	waiter := make(chan struct{}, 1)
 	hive := New()
-	hive.Use(logMiddleware)
 	worker := NewWorker(&mockTask{dofunc: func(ctx context.Context) error {
 		select {
 		case waiter <- struct{}{}:
@@ -35,7 +35,7 @@ func TestHive_Middleware(t *testing.T) {
 		}
 		<-ctx.Done()
 		return nil
-	}})
+	}}).Use(logMiddleware)
 	hive.Submit(worker)
 	<-waiter
 	if len(worker.middleware) != 1 {
@@ -68,7 +68,7 @@ func TestHive_MultipleWorkers(t *testing.T) {
 		}
 		<-ctx.Done()
 		return nil
-	}})
+	}}).Tick(time.Microsecond)
 	hive.Submit(worker2)
 
 	<-waiter1
