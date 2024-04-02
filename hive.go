@@ -57,13 +57,15 @@ func (hive *Hive) Use(middleFunc ...MiddleFunc) {
 	hive.middleware = append(hive.middleware, middleFunc...)
 }
 
-// Submit starts the worker running and adds it to the hive.
-func (hive *Hive) Submit(worker *Worker) {
-	hive.block.Add(1)
-	worker.notifyComplete = hive.notifyComplete
-	worker.middleware = append(hive.middleware, worker.middleware...)
-	hive.colony = append(hive.colony, worker)
-	go worker.run(&hive.block)
+// Submit starts the workers running and adds them to the hive.
+func (hive *Hive) Submit(workers ...*Worker) {
+	for _, worker := range workers {
+		hive.block.Add(1)
+		worker.notifyComplete = hive.notifyComplete
+		worker.middleware = append(hive.middleware, worker.middleware...)
+		hive.colony = append(hive.colony, worker)
+		go worker.run(&hive.block)
+	}
 }
 
 // StopAll should only be used when you are completely done with the hive. Internal channels are
