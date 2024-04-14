@@ -28,7 +28,7 @@ func New() *Hive {
 func (hive *Hive) startCleanupWorker() {
 	go func() {
 		for range hive.notifyComplete {
-			hive.removeDoneWorkers()
+			go hive.removeDoneWorkers()
 		}
 		hive.removeDoneWorkers()
 		hive.closed <- struct{}{}
