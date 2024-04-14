@@ -12,6 +12,7 @@ type Hive struct {
 	notifyComplete chan struct{}
 	middleware     []MiddleFunc
 	closed         chan struct{}
+	lock           sync.Mutex
 }
 
 // New initializes a new [*Hive].
@@ -35,6 +36,8 @@ func (hive *Hive) startCleanupWorker() {
 }
 
 func (hive *Hive) removeDoneWorkers() {
+	hive.lock.Lock()
+	defer hive.lock.Unlock()
 	finished := []int{}
 	for i := range hive.colony {
 		if hive.colony[i].done.Load() {
@@ -71,10 +74,16 @@ func (hive *Hive) Submit(workers ...*Worker) {
 // StopAll should only be used when you are completely done with the hive. Internal channels are
 // closed and all workers are shutdown.
 func (hive *Hive) StopAll() {
-	for i := range hive.colony {
-		hive.colony[i].Stop()
-	}
+	hive.stopAll()
 	hive.block.Wait()
 	close(hive.notifyComplete)
 	<-hive.closed
+}
+
+func (hive *Hive) stopAll() {
+	hive.lock.Lock()
+	defer hive.lock.Unlock()
+	for i := range hive.colony {
+		hive.colony[i].Stop()
+	}
 }
