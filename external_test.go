@@ -3,6 +3,7 @@ package buzz_test
 import (
 	"context"
 	"log"
+	"testing"
 
 	"github.com/thenorthnate/buzz"
 )
@@ -30,4 +31,14 @@ func Example() {
 	hive.Submit(worker)
 	// Some time later... during shutdown
 	hive.StopAll()
+}
+
+func TestNewTestCallChain(t *testing.T) {
+	middleware := func(ctx context.Context, chain *buzz.CallChain) error {
+		return nil
+	}
+	chain := buzz.NewTestCallChain(middleware)
+	if err := chain.Next(context.Background()); err != nil {
+		t.Fatal("got unexpected error ", err)
+	}
 }
