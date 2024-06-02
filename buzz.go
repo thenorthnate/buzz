@@ -26,3 +26,12 @@ func (chain *CallChain) Next(ctx context.Context) error {
 
 // MiddleFunc defines the type of any middleware that can be used in the hive.
 type MiddleFunc func(ctx context.Context, chain *CallChain) error
+
+// NewTestCallChain creates a new [CallChain] that simply executes the given [MiddleFunc].
+// The provided [MiddleFunc] will recieve a nil [CallChain]. This function is a utility to
+// make it easy to test your own middleware.
+func NewTestCallChain(exec MiddleFunc) *CallChain {
+	return &CallChain{
+		exec: exec,
+	}
+}
