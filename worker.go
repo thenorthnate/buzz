@@ -3,29 +3,25 @@ package buzz
 import (
 	"context"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
 // Worker wraps your task with additional context to provide a robust operational environment.
 type Worker struct {
-	task           Task
-	middleware     []MiddleFunc
-	cancel         context.CancelFunc
-	tick           time.Duration
-	tickChan       <-chan time.Time
-	notifyComplete chan struct{}
-	done           atomic.Bool
+	task        Task
+	middleware  []MiddleFunc
+	cadence     time.Duration
+	cadenceChan <-chan time.Time
+	lifetime    time.Duration
 }
 
-// NewWorker wraps the task and returns a worker that can be submitted to the hive.
-func NewWorker(task Task) *Worker {
-	tickChan := make(chan time.Time)
-	close(tickChan)
+// New wraps the task and returns a worker that can be started.
+func New(task Task) *Worker {
+	cadenceChan := make(chan time.Time)
+	close(cadenceChan)
 	return &Worker{
-		task:       task,
-		middleware: make([]MiddleFunc, 0),
-		tickChan:   tickChan,
+		task:        task,
+		cadenceChan: cadenceChan,
 	}
 }
 
@@ -35,11 +31,17 @@ func (w *Worker) Use(middleware ...MiddleFunc) *Worker {
 	return w
 }
 
-// Tick provides a mechanism through which you can schedule your task to get run on a
+// WithCadence provides a mechanism through which you can schedule your task to get run on a
 // regular interval. By default the tick time is zero meaning that the task is called
 // repeatedly as fast as the computer executes it.
-func (w *Worker) Tick(tick time.Duration) *Worker {
-	w.tick = tick
+func (w *Worker) WithCadence(cadence time.Duration) *Worker {
+	w.cadence = cadence
+	return w
+}
+
+// WithLifetime sets a
+func (w *Worker) WithLifetime(lifetime time.Duration) *Worker {
+	w.lifetime = lifetime
 	return w
 }
 
@@ -51,33 +53,38 @@ func (w *Worker) assembleCallChain() *CallChain {
 		node.next = &CallChain{}
 		node = node.next
 	}
+	// set "workTillError" as the final middleware in the callchain
 	node.exec = w.workTillError
 	return root
 }
 
-func (w *Worker) run(block *sync.WaitGroup) {
-	defer block.Done()
-	ctx, cancel := context.WithCancel(context.Background())
-	w.cancel = cancel
-	if w.tick > 0 {
-		ticker := time.NewTicker(w.tick)
-		defer ticker.Stop()
-		w.tickChan = ticker.C
+// Run begins the worker running.
+func (w *Worker) Run(ctx context.Context, wg *sync.WaitGroup) {
+	// defer block.Done()
+	cancel := func() {}
+	if w.lifetime > 0 {
+		ctx, cancel = context.WithTimeout(ctx, w.lifetime)
+	}
+	if w.cadence > 0 {
+		ticker := time.NewTicker(w.cadence)
+		// after Go 1.24, no need to call Stop on tickers!
+		w.cadenceChan = ticker.C
 	}
 	callChain := w.assembleCallChain()
-	for {
-		// execute chain of middleware funcs where each func is passed the next func
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			_ = w.runChainOnce(ctx, callChain)
+	wg.Add(1)
+	go func() {
+		defer cancel()
+		defer wg.Done()
+		for {
+			// execute chain of middleware funcs where each func is passed the next func
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				_ = callChain.Next(ctx)
+			}
 		}
-	}
-}
-
-func (w *Worker) runChainOnce(ctx context.Context, callChain *CallChain) error {
-	return callChain.Next(ctx)
+	}()
 }
 
 // workTillError should be the final "middleware" called in the call chain. The next call chain
@@ -87,19 +94,10 @@ func (w *Worker) workTillError(ctx context.Context, _ *CallChain) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-w.tickChan:
+		case <-w.cadenceChan:
 			if err := w.task.Do(ctx); err != nil {
 				return err
 			}
 		}
 	}
-}
-
-// Stop issues a command to the hive to stop this worker from running and remove it.
-func (w *Worker) Stop() {
-	if w.cancel != nil {
-		w.cancel()
-	}
-	w.done.Store(true)
-	w.notifyComplete <- struct{}{}
 }
