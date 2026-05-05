@@ -60,7 +60,6 @@ func (w *Worker) assembleCallChain() *CallChain {
 
 // Run begins the worker running.
 func (w *Worker) Run(ctx context.Context, wg *sync.WaitGroup) {
-	// defer block.Done()
 	cancel := func() {}
 	if w.lifetime > 0 {
 		ctx, cancel = context.WithTimeout(ctx, w.lifetime)
