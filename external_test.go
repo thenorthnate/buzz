@@ -3,6 +3,7 @@ package buzz_test
 import (
 	"context"
 	"log"
+	"sync"
 	"testing"
 
 	"github.com/thenorthnate/buzz"
@@ -26,11 +27,10 @@ func Example() {
 		log.Printf("Finished with err=[%v]\n", err)
 		return err
 	}
-	hive := buzz.New()
-	worker := buzz.NewWorker(&logTask{}).Use(logger)
-	hive.Submit(worker)
-	// Some time later... during shutdown
-	hive.StopAll()
+	// Starts worker and runs forever
+	buzz.New(&logTask{}).
+		Use(logger).
+		Run(context.Background(), &sync.WaitGroup{})
 }
 
 func TestNewTestCallChain(t *testing.T) {

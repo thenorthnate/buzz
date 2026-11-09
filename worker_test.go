@@ -3,6 +3,7 @@ package buzz
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 )
 
@@ -24,18 +25,16 @@ func TestWorker(t *testing.T) {
 		<-ctx.Done()
 		return nil
 	}}
-	worker := NewWorker(task)
-	hive := New()
-	hive.Submit(worker)
+	wg := &sync.WaitGroup{}
+	ctx, cancel := context.WithCancel(context.Background())
+	New(task).Run(ctx, wg)
 	<-waiter
-	hive.StopAll()
-	if len(hive.colony) > 0 {
-		t.Fatalf("the hive is supposed to be empty but it still has %v workers in it", len(hive.colony))
-	}
+	cancel()
+	wg.Wait()
 }
 
 func TestWorkerAssembleCallChain(t *testing.T) {
-	worker := NewWorker(&mockTask{})
+	worker := New(&mockTask{})
 	chain := worker.assembleCallChain()
 	if chain.exec == nil {
 		t.Fatal("exec was supposed to be defined but was nil instead")
@@ -46,7 +45,7 @@ func TestWorkerAssembleCallChain(t *testing.T) {
 }
 
 func TestWorkerWorkTillError(t *testing.T) {
-	worker := NewWorker(&mockTask{
+	worker := New(&mockTask{
 		dofunc: func(ctx context.Context) error {
 			return errors.New("darn")
 		},
@@ -58,7 +57,7 @@ func TestWorkerWorkTillError(t *testing.T) {
 	if chain.next != nil {
 		t.Fatal("chain.next was supposed to be nil")
 	}
-	if err := worker.runChainOnce(context.Background(), chain); err == nil {
-		t.Fatal("runChainOnce was supposed to return an error but did not")
+	if err := chain.Next(context.Background()); err == nil {
+		t.Fatal("Next was supposed to return an error but did not")
 	}
 }
